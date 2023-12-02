@@ -7,6 +7,7 @@ pub fn init(emd: &mut Emerald) {
     if emd.resources().contains::<Initted>() {
         return;
     }
+    println!("init");
     emd.loader().add_on_world_load_hook(on_world_load);
     emd.loader().add_world_merge_handler(on_world_merge);
     emd.loader().register_component::<TempId>("parent_id");
@@ -49,7 +50,6 @@ fn on_world_merge(
     _old_world: &mut World,
     entity_map: &mut HashMap<Entity, Entity>,
 ) -> Result<(), EmeraldError> {
-    // TODO: remap parents
     for (old_entity, new_entity) in entity_map.iter() {
         new_world
             .get::<&mut Parent>(new_entity.clone())
@@ -67,6 +67,8 @@ fn on_world_merge(
 #[serde(crate = "emerald::serde")]
 struct TempParent {
     parent: String,
+
+    #[serde(default)]
     offset: Transform,
 }
 
@@ -98,6 +100,7 @@ pub fn hierarchy_system(world: &mut World) {
     // guarantees that they will never overlap. Similarly, it can coexist with `parents` because
     // that view does not reference `Transform`s at all.
     for (_entity, (parent, absolute)) in world.query::<(&Parent, &mut Transform)>().iter() {
+        println!("parenting");
         // Walk the hierarchy from this entity to the root, accumulating the entity's absolute
         // transform. This does a small amount of redundant work for intermediate levels of deeper
         // hierarchies, but unlike a top-down traversal, avoids tracking entity child lists and is
@@ -110,6 +113,8 @@ pub fn hierarchy_system(world: &mut World) {
         }
         // The `while` loop terminates when `ancestor` cannot be found in `parents`, i.e. when it
         // does not have a `Parent` component, and is therefore necessarily a root.
-        *absolute = *roots.get(ancestor).unwrap() + relative;
+        roots.get(ancestor).map(|t| {
+            *absolute = *t + relative;
+        });
     }
 }
