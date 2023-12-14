@@ -1,13 +1,14 @@
 use std::{collections::HashMap, ops::Deref};
 
-use emerald::{serde::Deserialize, Emerald, EmeraldError, Entity, Transform, World};
+use emerald::{
+    serde::Deserialize, Emerald, EmeraldError, Entity, OnWorldLoadContext, Transform, World,
+};
 
 struct Initted {}
 pub fn init(emd: &mut Emerald) {
     if emd.resources().contains::<Initted>() {
         return;
     }
-    println!("init");
     emd.loader().add_on_world_load_hook(on_world_load);
     emd.loader().add_world_merge_handler(on_world_merge);
     emd.loader().register_component::<TempId>("parent_id");
@@ -15,7 +16,7 @@ pub fn init(emd: &mut Emerald) {
     emd.resources().insert(Initted {});
 }
 
-fn on_world_load(world: &mut World) -> Result<(), EmeraldError> {
+fn on_world_load(ctx: OnWorldLoadContext, world: &mut World) -> Result<(), EmeraldError> {
     let all_temp_parents = world.collect_by::<TempParent>();
     all_temp_parents.into_iter().for_each(|id| {
         let temp_parent = world.remove_one::<TempParent>(id).unwrap();
