@@ -101,7 +101,6 @@ pub fn hierarchy_system(world: &mut World) {
     // guarantees that they will never overlap. Similarly, it can coexist with `parents` because
     // that view does not reference `Transform`s at all.
     for (_entity, (parent, absolute)) in world.query::<(&Parent, &mut Transform)>().iter() {
-        println!("parenting");
         // Walk the hierarchy from this entity to the root, accumulating the entity's absolute
         // transform. This does a small amount of redundant work for intermediate levels of deeper
         // hierarchies, but unlike a top-down traversal, avoids tracking entity child lists and is
@@ -118,4 +117,12 @@ pub fn hierarchy_system(world: &mut World) {
             *absolute = *t + relative;
         });
     }
+}
+
+pub fn get_children(world: &World, parent_id: Entity) -> Vec<Entity> {
+    world
+        .query::<&Parent>()
+        .iter()
+        .filter_map(|(id, p)| (p.entity == parent_id).then(|| id))
+        .collect()
 }
