@@ -16,8 +16,28 @@ pub fn init(emd: &mut Emerald) {
     emd.resources().insert(Initted {});
 }
 
+struct OnParentHooks {
+    hooks: HashMap<usize, OnParentHook>,
+    uid: usize,
+}
+
+pub fn add_on_parented_hook(emd: &mut Emerald, hook: OnParentHook) {
+    if !emd.resources().contains::<OnParentHooks>() {
+        emd.resources().insert(OnParentHooks {
+            hooks: HashMap::new(),
+            uid: 0,
+        });
+    }
+
+    emd.resources().get_mut::<OnParentHooks>().map(|h| {
+        h.uid += 1;
+        h.hooks.insert(h.uid, hook);
+    });
+}
+
 fn on_world_load(ctx: OnWorldLoadContext, world: &mut World) -> Result<(), EmeraldError> {
     let all_temp_parents = world.collect_by::<TempParent>();
+    let mut parented = Vec::new();
     all_temp_parents.into_iter().for_each(|id| {
         let temp_parent = world.remove_one::<TempParent>(id).unwrap();
         let parent = world
@@ -26,6 +46,10 @@ fn on_world_load(ctx: OnWorldLoadContext, world: &mut World) -> Result<(), Emera
             .find(|(_, i)| &i.name == &temp_parent.parent)
             .map(|(id, _)| id);
         parent.map(|parent_id| {
+            parented.push(OnParentHookContext {
+                parent: parent_id,
+                child: id,
+            });
             world
                 .insert_one(
                     id,
@@ -43,6 +67,13 @@ fn on_world_load(ctx: OnWorldLoadContext, world: &mut World) -> Result<(), Emera
         world.remove_one::<TempId>(id).ok();
     });
 
+    ctx.resources.get::<OnParentHooks>().map(|h| {
+        parented.into_iter().for_each(|p_ctx| {
+            for (_, hook) in &h.hooks {
+                (hook)(world, &p_ctx);
+            }
+        });
+    });
     Ok(())
 }
 
@@ -63,6 +94,12 @@ fn on_world_merge(
     }
     Ok(())
 }
+
+pub struct OnParentHookContext {
+    pub parent: Entity,
+    pub child: Entity,
+}
+pub type OnParentHook = fn(world: &mut World, ctx: &OnParentHookContext);
 
 #[derive(Deserialize)]
 #[serde(crate = "emerald::serde")]
