@@ -1,7 +1,8 @@
-use std::{collections::HashMap, ops::Deref};
+use std::collections::HashMap;
 
 use emerald::{
     serde::Deserialize, Emerald, EmeraldError, Entity, OnWorldLoadContext, Transform, World,
+    WorldMerge,
 };
 
 struct Initted {}
@@ -81,6 +82,7 @@ fn on_world_merge(
     new_world: &mut World,
     _old_world: &mut World,
     entity_map: &mut HashMap<Entity, Entity>,
+    ctx: &WorldMerge,
 ) -> Result<(), EmeraldError> {
     for (old_entity, new_entity) in entity_map.iter() {
         new_world
@@ -154,6 +156,14 @@ pub fn hierarchy_system(world: &mut World) {
             *absolute = *t + relative;
         });
     }
+}
+
+pub fn get_entity_by_temp_parent_id(world: &World, id: &str) -> Option<Entity> {
+    world
+        .query::<&TempId>()
+        .iter()
+        .find(|(e, i)| &i.name == id)
+        .map(|(e, _)| e.clone())
 }
 
 pub fn get_children(world: &World, parent_id: Entity) -> Vec<Entity> {
