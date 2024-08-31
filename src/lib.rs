@@ -122,6 +122,11 @@ pub struct Parent {
     pub entity: Entity,
     pub offset: Transform,
 }
+impl Parent {
+    pub fn new(entity: Entity, offset: Transform) -> Self {
+        Self { entity, offset }
+    }
+}
 
 /// Updates the positions of all children to be relative to their parents
 pub fn hierarchy_system(world: &mut World) {
