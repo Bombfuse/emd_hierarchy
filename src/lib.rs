@@ -22,6 +22,27 @@ struct OnParentHooks {
     uid: usize,
 }
 
+pub fn remove_parent(world: &mut World, child: Entity) {
+    world.remove_one::<Parent>(child).ok();
+}
+
+pub fn add_parent(emd: &mut Emerald, world: &mut World, parent: Entity, child: Entity) {
+    world
+        .insert_one(
+            child,
+            Parent {
+                entity: parent,
+                offset: Transform::default(),
+            },
+        )
+        .ok();
+    emd.resources().get::<OnParentHooks>().map(|h| {
+        for (_, hook) in &h.hooks {
+            (hook)(world, &OnParentHookContext { parent, child });
+        }
+    });
+}
+
 pub fn add_on_parented_hook(emd: &mut Emerald, hook: OnParentHook) {
     if !emd.resources().contains::<OnParentHooks>() {
         emd.resources().insert(OnParentHooks {
